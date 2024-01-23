@@ -36,10 +36,10 @@ jobs:
           name: Install eksctl
           command: curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp && sudo mv /tmp/eksctl /usr/local/bin
       - run:
-          name: Install and confgure kubectl
+          name: Install & configure kubectl
           command: curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && kubectl version --client
       - run:
-          name: Install and confgure kubectl aws-iam-authenticator
+          name: Install and configure kubectl aws-iam-authenticator
           command: curl -Lo aws-iam-authenticator https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.5.9/aws-iam-authenticator_0.5.9_linux_amd64 && chmod +x ./aws-iam-authenticator && mkdir -p $HOME/bin && cp ./aws-iam-authenticator $HOME/bin/aws-iam-authenticator && export PATH=$PATH:$HOME/bin
       - run:
           name: Install and configuire helm
@@ -52,13 +52,13 @@ jobs:
           name: "helm login"
           command: |
             aws ecr get-login-password --region $AWS_DEFAULT_REGION | helm registry login --username AWS --password-stdin $AWS_ECR_ACCOUNT_URL
-      # - run:
-      #     name: "cluster configs"
-      #     command: |
-      #       eksctl utils write-kubeconfig --cluster=$AWS_EKS_CLUSTER_NAME --region=$AWS_CLUSTER_REGION
-      # - run:
-      #     name: "helm install"
-      #     command: bash ./scripts/deploy-flask.sh 1.0.0 $AWS_ECR_ACCOUNT_URL $AWS_ECR_HELM_REPO_NAME
+      - run:
+          name: "cluster configs"
+          command: |
+            eksctl utils write-kubeconfig --cluster=$AWS_EKS_CLUSTER_NAME --region=$AWS_DEFAULT_REGION
+      - run:
+          name: "helm install"
+          command: bash ./scripts/deploy-aws.sh 0.0.1-$CIRCLE_BUILD_NUM $AWS_ECR_ACCOUNT_URL $AWS_ECR_HELM_REPO_NAME
 workflows:
   build-and-test:
     jobs:
