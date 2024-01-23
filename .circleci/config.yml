@@ -53,12 +53,12 @@ jobs:
           command: |
             aws ecr get-login-password --region $AWS_DEFAULT_REGION | helm registry login --username AWS --password-stdin $AWS_ECR_ACCOUNT_URL
       - run:
-          name: "cluster configs"
+          name: "fetching cluster config"
           command: |
             eksctl utils write-kubeconfig --cluster=$AWS_EKS_CLUSTER_NAME --region=$AWS_DEFAULT_REGION
       - run:
           name: "helm install"
-          command: bash ./scripts/deploy-aws.sh 0.0.1-$CIRCLE_BUILD_NUM $AWS_ECR_ACCOUNT_URL $AWS_ECR_HELM_REPO_NAME
+          command: bash ./scripts/deploy-aws.sh 0.0.2 $CIRCLE_SHA1 $AWS_ECR_ACCOUNT_URL $AWS_ECR_REPO_NAME $AWS_ECR_HELM_REPO_NAME
 workflows:
   build-and-test:
     jobs:
@@ -73,7 +73,7 @@ workflows:
           docker-login: false
           account-url: AWS_ECR_ACCOUNT_URL
           region: AWS_DEFAULT_REGION
-          tag: "0.0.1-${CIRCLE_BUILD_NUM}"
+          tag: "0.0.2-${CIRCLE_SHA1:0:7}"
       - aws-ecr/push-helm-chart:
           account-url: AWS_ECR_ACCOUNT_URL
           aws-access-key-id: AWS_ACCESS_KEY_ID
@@ -82,7 +82,7 @@ workflows:
           path: ./charts
           region: AWS_DEFAULT_REGION
           repo: "${AWS_ECR_HELM_REPO_NAME}"
-          tag: "0.0.1-${CIRCLE_BUILD_NUM}"
+          tag: "0.0.2-${CIRCLE_SHA1:0:7}"
           requires:
             - aws-ecr/build-and-push-image
       - build-docker-image:
