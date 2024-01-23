@@ -20,10 +20,21 @@ spec:
       labels:
         {{- include "charts.selectorLabels" . | nindent 8 }}
     spec:
+      volumes:
+      - name: demo-pvc-volume
+        persistentVolumeClaim:
+          claimName: {{ .Values.persistence.name }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      initContainers:
+        - name: init-container
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          command: ["/bin/sh", "-c", "python manage.py migrate"]
+          volumeMounts:
+          - name: demo-pvc-volume
+            mountPath: /app
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -32,11 +43,14 @@ spec:
             - name: http
               containerPort: 8000
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /ht/
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /ht/
-              port: http
+          volumeMounts:
+          - name: demo-pvc-volume
+            mountPath: /app
+        # livenessProbe:
+        #   httpGet:
+        #     path: /ht/
+        #     port: http
+        # readinessProbe:
+        #   httpGet:
+        #     path: /ht/
+        #     port: http

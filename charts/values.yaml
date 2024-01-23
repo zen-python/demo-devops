@@ -11,11 +11,17 @@ service:
 replicaCount: 1
 ingress:
   enabled: false
-imagePullSecrets:
-  - name: regcred
+# imagePullSecrets:
+#   - name: regcred
 autoscaling:
   enabled: true  
   minReplicas: 2
   maxReplicas: 3
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
+persistence:
+  enabled: true
+  name: demo-pvc
+  storageClassName: gp2
+  accessMode: ReadWriteOnce
+  size: 1Gi
