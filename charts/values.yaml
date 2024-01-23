@@ -23,5 +23,5 @@ persistence:
   enabled: true
   name: demo-pvc
   storageClassName: gp2
-  accessMode: ReadWriteOnce
+  accessMode: ReadWriteMany
   size: 1Gi
