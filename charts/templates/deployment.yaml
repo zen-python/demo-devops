@@ -21,7 +21,7 @@ spec:
         {{- include "charts.selectorLabels" . | nindent 8 }}
     spec:
       volumes:
-      - name: demo-pvc-volume
+      - name: persistent-storage
         persistentVolumeClaim:
           claimName: {{ .Values.persistence.name }}
       {{- with .Values.imagePullSecrets }}
@@ -31,26 +31,40 @@ spec:
       initContainers:
         - name: init-container
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          env:
+            - name: DJANGO_SECRET_KEY
+              value: {{ .Values.django.secretKey }}
+            - name: DATABASE_NAME
+              value: {{ .Values.django.databaseName }}
           command: ["/bin/sh", "-c", "python manage.py migrate"]
           volumeMounts:
-          - name: demo-pvc-volume
+          - name: persistent-storage
             mountPath: /app
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          env:
+            - name: DJANGO_SECRET_KEY
+              value: {{ .Values.django.secretKey }}
+            - name: DATABASE_NAME
+              value: {{ .Values.django.databaseName }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
               containerPort: 8000
               protocol: TCP
           volumeMounts:
-          - name: demo-pvc-volume
+          - name: persistent-storage
             mountPath: /app
         # livenessProbe:
         #   httpGet:
-        #     path: /ht/
+        #     path: /ht
         #     port: http
+        #     initialDelaySeconds: 5
+        #     periodSeconds: 5
         # readinessProbe:
         #   httpGet:
-        #     path: /ht/
+        #     path: /ht
         #     port: http
+        #     initialDelaySeconds: 5
+        #     periodSeconds: 5

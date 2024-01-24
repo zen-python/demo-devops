@@ -2,6 +2,7 @@ image:
   repository: <AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/<AWS_ECR_REPO_NAME>
   pullPolicy: IfNotPresent
   tag: "latest"
+  containerPort: 8000
 labels:
   env: "staging"
 service:
@@ -11,17 +12,20 @@ service:
 replicaCount: 1
 ingress:
   enabled: false
+django:
+  secretKey: "default-secret-key"
+  databaseName: "default-database-name"
 # imagePullSecrets:
 #   - name: regcred
 autoscaling:
   enabled: true  
-  minReplicas: 2
-  maxReplicas: 3
+  minReplicas: 1
+  maxReplicas: 1
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
 persistence:
   enabled: true
-  name: demo-pvc
-  storageClassName: gp2
+  name: efs-claim
+  storageClassName: efs-sc
   accessMode: ReadWriteMany
-  size: 1Gi
+  size: 5Gi
