@@ -2,7 +2,7 @@ version: 2.1
 orbs:
   python: circleci/python@2
   aws-ecr: orbies/aws-ecr@1.2.1
-  sonarcloud: sonarsource/sonarcloud@2.0.0
+  sonarcloud: sonarcloud-orb/sonarcloud-alt@1.0.3
 jobs:
   sast:
     docker:
