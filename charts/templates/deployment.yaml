@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "charts.fullname" . }}
+  labels:
+    {{- include "charts.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "charts.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "charts.selectorLabels" . | nindent 8 }}
+    spec:
+      volumes:
+        - name: efsvolume
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.name }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: copy
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          command: ["/bin/sh", "-c", "cp -R /app/* /efsvolume"]
+          volumeMounts:
+          - name: efsvolume
+            mountPath: /efsvolume
+        - name: migrations
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          command: ["/bin/sh", "-c", "python manage.py migrate"]
+          env:
+          - name: DJANGO_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "charts.fullname" . }}
+                key: django-secretkey
+          - name: DATABASE_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "charts.fullname" . }}
+                key: database_name
+          volumeMounts:
+          - name: efsvolume
+            mountPath: /app
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          env:
+          - name: DJANGO_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "charts.fullname" . }}
+                key: django-secretkey
+          - name: DATABASE_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "charts.fullname" . }}
+                key: database_name
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.image.containerPort }}
+              protocol: TCP
+          volumeMounts:
+          - name: efsvolume
+            mountPath: /app
+        # livenessProbe:
+        #   httpGet:
+        #     path: /ht
+        #     port: http
+        #     initialDelaySeconds: 5
+        #     periodSeconds: 5
+        # readinessProbe:
+        #   httpGet:
+        #     path: /ht
+        #     port: http
+        #     initialDelaySeconds: 5
+        #     periodSeconds: 5

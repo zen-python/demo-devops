@@ -1,0 +1,77 @@
+version: 2.1
+orbs:
+  python: circleci/python@2
+  aws-ecr: orbies/aws-ecr@1.2.1
+jobs:
+  test-python:
+    # Install dependencies and run tests
+    docker:
+      - image: cimg/python:3.11.3
+    steps:
+      - checkout
+      - python/install-packages
+      - run:
+          name: Run tests
+          command: python manage.py test
+  helm-chart-deploy:
+    docker:
+      - image: cimg/python:3.11.3
+    steps:
+      - checkout
+      - run:
+          name: Install awscli
+          command: curl --silent "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && unzip awscliv2.zip && sudo ./aws/install
+      - run:
+          name: Install eksctl
+          command: curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp && sudo mv /tmp/eksctl /usr/local/bin
+      - run:
+          name: Install & configure kubectl
+          command: curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl && kubectl version --client
+      - run:
+          name: Install and configure kubectl aws-iam-authenticator
+          command: curl -Lo aws-iam-authenticator https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.5.9/aws-iam-authenticator_0.5.9_linux_amd64 && chmod +x ./aws-iam-authenticator && mkdir -p $HOME/bin && cp ./aws-iam-authenticator $HOME/bin/aws-iam-authenticator && export PATH=$PATH:$HOME/bin
+      - run:
+          name: Install and configuire helm
+          command: sudo curl -L https://get.helm.sh/helm-v3.10.1-linux-amd64.tar.gz | tar xz && sudo mv linux-amd64/helm /bin/helm && sudo rm -rf linux-amd64
+      - run:
+          name: "docker login"
+          command: |
+            aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ECR_ACCOUNT_URL
+      - run:
+          name: "helm login"
+          command: |
+            aws ecr get-login-password --region $AWS_DEFAULT_REGION | helm registry login --username AWS --password-stdin $AWS_ECR_ACCOUNT_URL
+      - run:
+          name: "fetching cluster config"
+          command: |
+            eksctl utils write-kubeconfig --cluster=$AWS_EKS_CLUSTER_NAME --region=$AWS_DEFAULT_REGION
+      - run:
+          name: "helm install"
+          command: bash ./scripts/deploy-aws.sh 0.0.1 $CIRCLE_SHA1 $AWS_ECR_ACCOUNT_URL $AWS_ECR_REPO_NAME $AWS_ECR_HELM_REPO_NAME $DJANGO_SECRET_KEY $DATABASE_NAME
+workflows:
+  build-and-test:
+    jobs:
+      - test-python
+      - aws-ecr/build-and-push-image:
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          repo: "${AWS_ECR_REPO_NAME}"
+          docker-login: false
+          account-url: AWS_ECR_ACCOUNT_URL
+          region: AWS_DEFAULT_REGION
+          tag: "0.0.1-${CIRCLE_SHA1:0:7}"
+      - aws-ecr/push-helm-chart:
+          account-url: AWS_ECR_ACCOUNT_URL
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          create-repo: false
+          path: ./charts
+          region: AWS_DEFAULT_REGION
+          repo: "${AWS_ECR_HELM_REPO_NAME}"
+          tag: "0.0.1-${CIRCLE_SHA1:0:7}"
+          requires:
+            - aws-ecr/build-and-push-image
+      - helm-chart-deploy:
+          requires:
+            - aws-ecr/build-and-push-image
+            - aws-ecr/push-helm-chart

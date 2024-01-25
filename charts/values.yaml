@@ -1,0 +1,29 @@
+image:
+  repository: <AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/<AWS_ECR_REPO_NAME>
+  pullPolicy: IfNotPresent
+  tag: "latest"
+  containerPort: 8000
+labels:
+  env: "sandbox"
+service:
+  port: 80
+  targetPort: 8000
+  type: NodePort
+replicaCount: 1
+ingress:
+  enabled: false
+django:
+  secretKey: "default-secret-key"
+  databaseName: "default-database-name"
+autoscaling:
+  enabled: true  
+  minReplicas: 2
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+persistence:
+  enabled: true
+  name: efs-claim
+  storageClassName: efs-sc
+  accessMode: ReadWriteMany
+  size: 5Gi
