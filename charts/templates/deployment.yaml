@@ -40,9 +40,15 @@ spec:
           command: ["/bin/sh", "-c", "python manage.py migrate"]
           env:
           - name: DJANGO_SECRET_KEY
-            value: {{ .Values.django.secretKey }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "charts.fullname" . }}
+                key: django-secretkey
           - name: DATABASE_NAME
-            value: {{ .Values.django.databaseName }}
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "charts.fullname" . }}
+                key: database_name
           volumeMounts:
           - name: efsvolume
             mountPath: /app
@@ -50,10 +56,16 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           env:
-            - name: DJANGO_SECRET_KEY
-              value: {{ .Values.django.secretKey }}
-            - name: DATABASE_NAME
-              value: {{ .Values.django.databaseName }}
+          - name: DJANGO_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "charts.fullname" . }}
+                key: django-secretkey
+          - name: DATABASE_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: {{ include "charts.fullname" . }}
+                key: database_name
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
