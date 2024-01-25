@@ -21,24 +21,30 @@ spec:
         {{- include "charts.selectorLabels" . | nindent 8 }}
     spec:
       volumes:
-      - name: persistent-storage
-        persistentVolumeClaim:
-          claimName: {{ .Values.persistence.name }}
+        - name: efsvolume
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.name }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       initContainers:
-        - name: init-container
+        - name: copy
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          env:
-            - name: DJANGO_SECRET_KEY
-              value: {{ .Values.django.secretKey }}
-            - name: DATABASE_NAME
-              value: {{ .Values.django.databaseName }}
-          command: ["/bin/sh", "-c", "python manage.py migrate"]
+          command: ["/bin/sh", "-c", "cp -R /app/* /efsvolume"]
           volumeMounts:
-          - name: persistent-storage
+          - name: efsvolume
+            mountPath: /efsvolume
+        - name: migrations
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          command: ["/bin/sh", "-c", "python manage.py migrate"]
+          env:
+          - name: DJANGO_SECRET_KEY
+            value: {{ .Values.django.secretKey }}
+          - name: DATABASE_NAME
+            value: {{ .Values.django.databaseName }}
+          volumeMounts:
+          - name: efsvolume
             mountPath: /app
       containers:
         - name: {{ .Chart.Name }}
@@ -51,10 +57,10 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8000
+              containerPort: {{ .Values.image.containerPort }}
               protocol: TCP
           volumeMounts:
-          - name: persistent-storage
+          - name: efsvolume
             mountPath: /app
         # livenessProbe:
         #   httpGet:

@@ -4,23 +4,21 @@ image:
   tag: "latest"
   containerPort: 8000
 labels:
-  env: "staging"
+  env: "sandbox"
 service:
-  port: 8000
+  port: 80
   targetPort: 8000
-  type: LoadBalancer
+  type: NodePort
 replicaCount: 1
 ingress:
   enabled: false
 django:
   secretKey: "default-secret-key"
   databaseName: "default-database-name"
-# imagePullSecrets:
-#   - name: regcred
 autoscaling:
   enabled: true  
-  minReplicas: 1
-  maxReplicas: 1
+  minReplicas: 2
+  maxReplicas: 3
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
 persistence:
