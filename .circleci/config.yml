@@ -2,7 +2,14 @@ version: 2.1
 orbs:
   python: circleci/python@2
   aws-ecr: orbies/aws-ecr@1.2.1
+  sonarcloud: sonarcloud-orb/sonarcloud-alt@1.0.3
 jobs:
+  sast:
+    docker:
+      - image: node:latest
+    steps:
+      - checkout
+      - sonarcloud/scan
   test-python:
     # Install dependencies and run tests
     docker:
@@ -51,6 +58,7 @@ jobs:
 workflows:
   build-and-test:
     jobs:
+      - sast
       - test-python
       - aws-ecr/build-and-push-image:
           aws-access-key-id: AWS_ACCESS_KEY_ID
@@ -59,7 +67,7 @@ workflows:
           docker-login: false
           account-url: AWS_ECR_ACCOUNT_URL
           region: AWS_DEFAULT_REGION
-          tag: "0.0.1-${CIRCLE_SHA1:0:7}"
+          tag: latest,"0.0.1-${CIRCLE_SHA1:0:7}"
       - aws-ecr/push-helm-chart:
           account-url: AWS_ECR_ACCOUNT_URL
           aws-access-key-id: AWS_ACCESS_KEY_ID

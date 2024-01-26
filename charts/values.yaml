@@ -11,14 +11,15 @@ service:
   type: NodePort
 replicaCount: 1
 ingress:
-  enabled: false
+  enabled: true
+  port: 80
 django:
   secretKey: "default-secret-key"
   databaseName: "default-database-name"
 autoscaling:
   enabled: true  
   minReplicas: 2
-  maxReplicas: 3
+  maxReplicas: 4
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
 persistence:
@@ -27,3 +28,19 @@ persistence:
   storageClassName: efs-sc
   accessMode: ReadWriteMany
   size: 5Gi
+limits:
+  memory: "256Mi"
+  cpu: "200m"
+requests:
+  memory: "128Mi"
+  cpu: "100m"
+livenessProbe:
+  enabled: true
+  path: /ht
+  initialDelaySeconds: 5
+  periodSeconds: 5
+readinessProbe:
+  enabled: true
+  path: /ht
+  initialDelaySeconds: 5
+  periodSeconds: 5

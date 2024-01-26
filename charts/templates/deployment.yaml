@@ -74,15 +74,26 @@ spec:
           volumeMounts:
           - name: efsvolume
             mountPath: /app
-        # livenessProbe:
-        #   httpGet:
-        #     path: /ht
-        #     port: http
-        #     initialDelaySeconds: 5
-        #     periodSeconds: 5
-        # readinessProbe:
-        #   httpGet:
-        #     path: /ht
-        #     port: http
-        #     initialDelaySeconds: 5
-        #     periodSeconds: 5
+          resources:
+            limits:
+              memory: {{ .Values.limits.memory }}
+              cpu: {{ .Values.limits.cpu }}
+            requests:
+              memory: {{ .Values.requests.memory }}
+              cpu: {{ .Values.requests.cpu }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          {{- end }}
