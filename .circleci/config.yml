@@ -4,13 +4,49 @@ orbs:
   aws-ecr: orbies/aws-ecr@1.2.1
   sonarcloud: sonarcloud-orb/sonarcloud-alt@1.0.3
 jobs:
+  coverage:
+    docker:
+      - image: cimg/python:3.11.3
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: pip install -r requirements.txt
+      - run:
+          name: Run coverage
+          command: coverage run manage.py test
+      - run:
+          name: Generate coverage report
+          command: coverage report
+  cve:
+    docker:
+      - image: cimg/base:stable
+    environment:
+      IMAGE_TAG: docker/scout-demo-service:latest
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 20.10.24
+      - run:
+          name: Install Docker Scout
+          command: |
+            env
+            curl -sSfL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh | sh -s -- -b /home/circleci/bin
+            echo $DOCKER_HUB_PAT | docker login -u $DOCKER_HUB_USER --password-stdin  
+      - run:
+          name: Build Docker image
+          command: docker build -t $IMAGE_TAG .
+      - run:
+          name: Scan image for CVEs
+          command: |
+            docker-scout cves $IMAGE_TAG --exit-code --only-severity critical,high
   sast:
     docker:
       - image: node:latest
     steps:
       - checkout
       - sonarcloud/scan
-  test-python:
+  unit-test:
     # Install dependencies and run tests
     docker:
       - image: cimg/python:3.11.3
@@ -58,8 +94,10 @@ jobs:
 workflows:
   build-and-test:
     jobs:
+      - coverage
+      - cve
       - sast
-      - test-python
+      - unit-test
       - aws-ecr/build-and-push-image:
           aws-access-key-id: AWS_ACCESS_KEY_ID
           aws-secret-access-key: AWS_SECRET_ACCESS_KEY
