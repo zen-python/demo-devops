@@ -1,0 +1,15 @@
+.coverage
+.coveragerc
+.dockerignore
+.env
+.gitignore
+README.md
+Dockerfile
+scripts/
+charts/
+venv/
+.DS_Store/
+.circleci/
+.git/
+
+
