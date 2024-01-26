@@ -76,20 +76,24 @@ spec:
             mountPath: /app
           resources:
             limits:
-              memory: "256Mi"
-              cpu: "200m"
+              memory: {{ .Values.limits.memory }}
+              cpu: {{ .Values.limits.cpu }}
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: {{ .Values.requests.memory }}
+              cpu: {{ .Values.requests.cpu }}
+          {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
-              path: /ht
+              path: {{ .Values.livenessProbe.path }}
               port: http
-            initialDelaySeconds: 10
-            periodSeconds: 5
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
               path: /ht
               port: http
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
             periodSeconds: 5
+          {{- end }}
